@@ -18,7 +18,7 @@ export const db = getFirestore(app);
 // Users log in with a plain loginId (not an email). We convert it to a fake
 // email under a fixed fake domain to use under Firebase Auth. Must match
 // the same logic used in api/createViewer.js on the backend.
-export const FAKE_EMAIL_DOMAIN = 'test.com';
+export const FAKE_EMAIL_DOMAIN = 'gmail.com';
 
 export function loginIdToFakeEmail(loginId) {
   return `${loginId.trim().toLowerCase()}@${FAKE_EMAIL_DOMAIN}`;
