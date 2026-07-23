@@ -5,8 +5,6 @@ import { auth } from './firebase';
  * Firebase ID token as a Bearer token. Throws with the server's error message
  * on non-2xx responses.
  */
-console.log(email);
-console.log(password);
 
 export async function callApi(path, body) {
   const user = auth.currentUser;
