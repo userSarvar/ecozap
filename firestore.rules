@@ -1,0 +1,60 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: is the requester logged in at all?
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper: read the requester's own account doc to check role/active status.
+    // Every user (admin or viewer) has a doc in /users/{uid} keyed by their auth uid.
+    function myUserDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return isSignedIn() && myUserDoc().data.role == 'admin';
+    }
+
+    function isActiveUser() {
+      return isSignedIn() && myUserDoc().data.active == true;
+    }
+
+    // ---------- users collection (admin + viewer accounts) ----------
+    // Doc ID == Firebase Auth UID.
+    match /users/{uid} {
+      // A user may always read their OWN doc (to know their role/alias/active status).
+      // Admin may read any user doc.
+      allow read: if isSignedIn() && (request.auth.uid == uid || isAdmin());
+
+      // Only admin may write user docs directly from client.
+      // (In practice creation/disable goes through the serverless functions using
+      // the Admin SDK, which bypasses these rules anyway — this blocks any other
+      // direct client writes.)
+      allow write: if isAdmin();
+    }
+
+    // ---------- parts collection ----------
+    match /parts/{partId} {
+      // Any signed-in, active user (admin or viewer) can read stock.
+      allow read: if isActiveUser();
+
+      // Only admin can import/restock/edit/delete parts from the client.
+      // Stock DECREMENTS on export happen server-side via /api/exportPart
+      // (Admin SDK bypasses these rules), so this is the only write path.
+      allow create, update, delete: if isAdmin();
+    }
+
+    // ---------- exports collection ----------
+    // ALL writes to exports happen via the /api/exportPart serverless function
+    // (Firebase Admin SDK), which bypasses these rules entirely. This guarantees
+    // the stock-decrement + export-record creation is atomic and can't be
+    // forged or bypassed from the client. Client only ever reads.
+    match /exports/{exportId} {
+      allow read: if isActiveUser();
+      allow create, update, delete: if isAdmin(); // admin-only manual override, rare
+    }
+  }
+}
