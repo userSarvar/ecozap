@@ -9,12 +9,12 @@ export default async function handler(req, res) {
   try {
     caller = await requireAdmin(req);
   } catch (err) {
-    return res.status(err.statusCode || 401).json({ error: err.message });
+    console.error('requireAdmin failed:', err);
+    return res.status(err.statusCode || 500).json({ error: err.message || 'Auth check failed' });
   }
 
   const { partId, quantity, carModel, plateNumber, sellPrice, customerPhone } = req.body || {};
 
-  // ---- Input validation (never trust the client) ----
   if (typeof partId !== 'string' || !partId.trim()) {
     return res.status(400).json({ error: 'partId is required' });
   }
@@ -56,14 +56,11 @@ export default async function handler(req, res) {
         );
       }
 
-      // Decrement stock
       tx.update(partRef, {
         quantity: available - quantity,
         updatedAt: new Date(),
       });
 
-      // Create export record. performedBy comes from the verified token, not
-      // the client body, so it can't be spoofed.
       tx.set(exportRef, {
         partId,
         partName: part.name,
