@@ -11,27 +11,21 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
     }
 
-    // Only readable by the user themself, or by an admin (for AdminViewers list).
-    // All writes go through backend Admin SDK (/api/createViewer, /api/toggleUser).
     match /users/{userId} {
       allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
       allow write: if false;
     }
 
-    // Any signed-in user can view inventory; only admins can add/edit/delete.
     match /parts/{partId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    // Any signed-in user can view export history.
-    // All writes go through backend Admin SDK (/api/exportPart).
-    match /exports/{exportId} {
       allow read: if isSignedIn();
       allow write: if false;
     }
 
-    // Deny everything else by default.
+    match /history/{entryId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

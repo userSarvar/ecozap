@@ -36,7 +36,7 @@ export default async function handler(req, res) {
 
   const db = adminDb();
   const partRef = db.collection('parts').doc(partId);
-  const exportRef = db.collection('exports').doc();
+  const historyRef = db.collection('history').doc();
 
   try {
     await db.runTransaction(async (tx) => {
@@ -61,13 +61,14 @@ export default async function handler(req, res) {
         updatedAt: new Date(),
       });
 
-      tx.set(exportRef, {
+      tx.set(historyRef, {
+        type: 'export',
         partId,
         partName: part.name,
         quantity,
+        price: sellPrice,
         carModel: carModel.trim(),
         plateNumber: plateNumber.trim(),
-        sellPrice,
         customerPhone: customerPhone.trim(),
         performedBy: caller.uid,
         performedByAlias: caller.userData.alias,
@@ -75,7 +76,7 @@ export default async function handler(req, res) {
       });
     });
 
-    return res.status(200).json({ success: true, exportId: exportRef.id });
+    return res.status(200).json({ success: true, exportId: historyRef.id });
   } catch (err) {
     const statusCode = err.statusCode || 500;
     return res.status(statusCode).json({ error: err.message || 'Export failed' });
